@@ -7,6 +7,7 @@ import type { Env, Variables, ChatRequest, ProviderMessage } from '../../src/typ
 import { dehydrate, rehydrate } from '../../src/pii/engine.js';
 import { chatStream, chat, ProviderError } from '../../src/providers/openai-compatible.js';
 import { sign, verify } from '../../src/crypto/jwt.js';
+import { getSystemPrompt } from '../dmlog-config.js';
 
 const chatApp = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -43,6 +44,12 @@ chatApp.post('/completions', async (c) => {
   // PII dehydrate user messages
   const systemMsg = body.messages.find(m => m.role === 'system');
   const nonSystemMessages = body.messages.filter(m => m.role !== 'system');
+  
+  // Inject DMlog.ai system prompt if no system message provided
+  let dmSystemPrompt = null;
+  if (!systemMsg) {
+    dmSystemPrompt = await getSystemPrompt(c.env);
+  }
 
   let dehydratedMessages: ProviderMessage[] = [];
   let preamble = '';
@@ -60,6 +67,7 @@ chatApp.post('/completions', async (c) => {
   // Build full message list
   const allMessages: ProviderMessage[] = [];
   if (systemMsg) allMessages.push(systemMsg);
+  else if (dmSystemPrompt) allMessages.push({ role: 'system', content: dmSystemPrompt });
   if (preamble) allMessages.push({ role: 'system', content: preamble });
   allMessages.push(...dehydratedMessages);
 

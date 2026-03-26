@@ -19,6 +19,18 @@ export const overlay = signal(null);
 effect(() => {
   document.documentElement.setAttribute('data-theme', theme.value);
   localStorage.setItem('lo-theme', theme.value);
+  // Load DMlog custom theme if available
+  if (document.body.classList.contains('dm-theme') || window.location.hostname.includes('dmlog')) {
+    const existing = document.getElementById('dm-theme-css');
+    if (!existing) {
+      const link = document.createElement('link');
+      link.id = 'dm-theme-css';
+      link.rel = 'stylesheet';
+      link.href = '/theme.css';
+      document.head.appendChild(link);
+      document.body.classList.add('dm-theme');
+    }
+  }
 });
 
 // Keyboard shortcuts
