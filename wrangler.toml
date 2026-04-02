@@ -1,21 +1,7 @@
 name = "reallog-ai"
-main = "worker/index.ts"
-compatibility_date = "2025-03-01"
-compatibility_flags = ["nodejs_compat"]
-
-[assets]
-directory = "./web"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "reallog-ai"
-database_id = ""
+main = "src/worker.ts"
+compatibility_date = "2024-12-01"
 
 [[kv_namespaces]]
-binding = "KV"
+binding = "REALLOG_KV"
 id = ""
-
-[vars]
-ENVIRONMENT = "production"
-THEME = "business"
-DOMAIN = "business"
