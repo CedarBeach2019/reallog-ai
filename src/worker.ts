@@ -1,4 +1,4 @@
-import { loadBYOKConfig, saveBYOKConfig, callLLM, generateSetupHTML, getBuiltinProviders } from './lib/byok.js';
+import { loadBYOKConfig, saveBYOKConfig, callLLM, generateSetupHTML } from './lib/byok.js';
 
 const BRAND = '#dc2626';
 const NAME = 'RealLog.ai';
@@ -11,6 +11,18 @@ const FEATURES = [
   { icon: '🤖', title: 'Repo-Agent Content Manager', desc: 'Autonomous agents that manage your media pipeline 24/7' },
   { icon: '🔑', title: 'Multi-Provider BYOK', desc: 'Bring OpenAI, Anthropic, DeepSeek, or any OpenAI-compatible provider' },
 ];
+
+const SEED_DATA = {
+  journalism: {
+    frameworks: ['Inverted Pyramid', 'Narrative Arc', 'Five Ws + H', 'AP Style', 'Investigative Series'],
+    contentTypes: ['Breaking News', 'Feature Story', 'Op-Ed', 'Analysis', 'Investigative', 'Review', 'Interview'],
+    editorialPipeline: ['Tip → Verify → Research → Draft → Edit → Publish → Distribute'],
+    mediaFormats: ['Text', 'Video', 'Audio/Podcast', 'Photo Essay', 'Interactive', 'Data Visualization'],
+    sourcingPrinciples: ['Primary Sources First', 'Cross-Reference', 'On-Record Preference', 'Fact-Check Chain'],
+  },
+};
+
+const FLEET = { name: NAME, tier: 2, domain: 'journalism-content', fleetVersion: '2.0.0', builtBy: 'Superinstance & Lucineer (DiGennaro et al.)' };
 
 function landingHTML(): string {
   const featureCards = FEATURES.map(f =>
@@ -33,16 +45,26 @@ function landingHTML(): string {
 
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*;";
 
+function confidenceScore(context: string): number {
+  const cues = ['verified', 'source', 'confirmed', 'official', 'reported', 'evidence', 'documented'];
+  const hits = cues.filter(c => context.toLowerCase().includes(c)).length;
+  return Math.min(0.5 + hits * 0.1, 1.0);
+}
+
 export default {
   async fetch(request: Request, env: any): Promise<Response> {
     const url = new URL(request.url);
     const headers = { 'Content-Type': 'text/html;charset=utf-8', 'Content-Security-Policy': CSP };
     const jsonHeaders = { 'Content-Type': 'application/json' };
 
-    // ── Static Routes ──
     if (url.pathname === '/') return new Response(landingHTML(), { headers });
-    if (url.pathname === '/health') return new Response(JSON.stringify({ status: 'ok', service: NAME }), { headers: jsonHeaders });
+    if (url.pathname === '/health') return new Response(JSON.stringify({ status: 'ok', service: NAME, fleet: FLEET }), { headers: jsonHeaders });
     if (url.pathname === '/setup') return new Response(generateSetupHTML(NAME, BRAND), { headers });
+
+    // ── Seed Route ──
+    if (url.pathname === '/api/seed') {
+      return new Response(JSON.stringify({ service: NAME, seed: SEED_DATA }, null, 2), { headers: jsonHeaders });
+    }
 
     // ── BYOK Config ──
     if (url.pathname === '/api/byok/config') {
@@ -57,22 +79,58 @@ export default {
       }
     }
 
-    // ── Chat (requires BYOK) ──
+    // ── Chat with confidence + memory ──
     if (url.pathname === '/api/chat' && request.method === 'POST') {
       const config = await loadBYOKConfig(request, env);
       if (!config) return new Response(JSON.stringify({ error: 'No provider configured. Visit /setup' }), { status: 401, headers: jsonHeaders });
       const body = await request.json();
+      const lastMsg = (body.messages || []).slice(-1)[0]?.content || '';
+      const conf = confidenceScore(lastMsg);
+      // Save summary to KV if available
+      if (env?.REALLOG_KV) {
+        try {
+          const summary = lastMsg.slice(0, 200);
+          await env.REALLOG_KV.put(`chat:${Date.now()}`, JSON.stringify({ summary, confidence: conf, ts: new Date().toISOString() }), { expirationTtl: 86400 });
+        } catch {}
+      }
       return callLLM(config, body.messages || [], { stream: body.stream, maxTokens: body.maxTokens, temperature: body.temperature });
     }
 
-    // ── API Stubs ──
-    const stubRoutes: Record<string, string> = {
-      '/api/stories': 'Story pipeline endpoints',
-      '/api/media': 'Media library endpoints',
-      '/api/research': 'Research board endpoints',
-    };
-    if (stubRoutes[url.pathname]) {
-      return new Response(JSON.stringify({ service: NAME, endpoint: url.pathname, message: stubRoutes[url.pathname] }), { headers: jsonHeaders });
+    // ── Stories ──
+    if (url.pathname === '/api/stories') {
+      if (request.method === 'GET') {
+        const stories = env?.REALLOG_KV ? JSON.parse(await env.REALLOG_KV.get('stories') || '[]') : [];
+        return new Response(JSON.stringify({ stories }), { headers: jsonHeaders });
+      }
+      if (request.method === 'POST') {
+        const data = await request.json();
+        const stories = env?.REALLOG_KV ? JSON.parse(await env.REALLOG_KV.get('stories') || '[]') : [];
+        const story = { id: Date.now().toString(36), ...data, createdAt: new Date().toISOString() };
+        stories.push(story);
+        if (env?.REALLOG_KV) await env.REALLOG_KV.put('stories', JSON.stringify(stories));
+        return new Response(JSON.stringify({ story }), { headers: jsonHeaders });
+      }
+    }
+
+    // ── Media ──
+    if (url.pathname === '/api/media') {
+      if (request.method === 'GET') {
+        const media = env?.REALLOG_KV ? JSON.parse(await env.REALLOG_KV.get('media') || '[]') : [];
+        return new Response(JSON.stringify({ media }), { headers: jsonHeaders });
+      }
+      if (request.method === 'POST') {
+        const data = await request.json();
+        const media = env?.REALLOG_KV ? JSON.parse(await env.REALLOG_KV.get('media') || '[]') : [];
+        const item = { id: Date.now().toString(36), ...data, createdAt: new Date().toISOString() };
+        media.push(item);
+        if (env?.REALLOG_KV) await env.REALLOG_KV.put('media', JSON.stringify(media));
+        return new Response(JSON.stringify({ item }), { headers: jsonHeaders });
+      }
+    }
+
+    // ── Research (stub) ──
+    if (url.pathname === '/api/research') {
+      return new Response(JSON.stringify({ service: NAME, endpoint: '/api/research', message: 'Research board — coming soon' }), { headers: jsonHeaders });
     }
 
     return new Response('Not Found', { status: 404 });
