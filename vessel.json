@@ -1,0 +1,14 @@
+{
+  "name": "reallog-ai",
+  "displayName": "Reallog",
+  "version": "1.0.0",
+  "type": "cocapn-vessel",
+  "category": "lifestyle",
+  "description": "AI-powered Reallog companion",
+  "icon": "ship",
+  "endpoints": ["/", "/health", "/vessel.json"],
+  "deployment": {
+    "platform": "cloudflare-workers",
+    "url": "https://reallog-ai.casey-digennaro.workers.dev"
+  }
+}
