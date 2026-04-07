@@ -4,7 +4,7 @@
 
 <h1 align="center">reallog-ai</h1>
 
-<p align="center">AI life journal. Reflective companion that finds patterns in your thoughts.</p>
+<p align="center">An AI-assisted journal that helps you notice patterns in your own writing over time.</p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
@@ -15,97 +15,63 @@
 
 ---
 
-**Live:** [reallog-ai](https://reallog-ai.casey-digennaro.workers.dev) · **Powered by [Capitaine](https://github.com/Lucineer/capitaine) · [Cocapn](https://github.com/Lucineer/cocapn)**
+Most journal apps are text boxes with timestamps. You write, it saves. Finding your own long-term patterns is manual work.
 
-The repo IS the agent. reallog-ai is a cocapn vessel — a self-improving repository that runs on Cloudflare Workers, thinks with LLMs, and coordinates with the fleet through git.
+reallog-ai is a simple companion that reads your entries and surfaces connections you might have missed—recurring worries, subtle progress, or topics that resurface across weeks.
+
+It doesn't tell you what to think. It quietly shows you what you've been thinking.
+
+## Why this exists
+
+Many AI journals are SaaS products that hold your data on their servers. This is a self-contained agent you deploy and control. Your entries stay within your own Cloudflare Worker, and you choose which LLM provider processes them. There is no middleman service.
+
+## How it works
+
+This is an open-source vessel in the Cocapn fleet. You fork it, deploy it, and it runs independently. It can optionally receive non-breaking updates from the fleet, but you can also disable this and modify any part of the code yourself.
+
+**Live Instance:** [reallog-ai](https://reallog-ai.casey-digennaro.workers.dev) · MIT Licensed · Runs on Cloudflare Workers
+
+Built with [Capitaine](https://github.com/Lucineer/capitaine) · [Cocapn](https://github.com/Lucineer/cocapn)
+
+---
 
 ## Quick Start
 
-```bash
-# Fork and deploy
-gh repo fork Lucineer/reallog-ai --clone
-cd reallog-ai
-npx wrangler login
-echo "your-github-token" | npx wrangler secret put GITHUB_TOKEN
-echo "your-llm-key" | npx wrangler secret put DEEPSEEK_API_KEY
-npx wrangler deploy
-```
+1.  **Fork this repository.** This becomes your own copy.
+2.  Deploy to Cloudflare Workers:
+    ```bash
+    npx wrangler deploy
+    ```
+    You will need to set `DEEPSEEK_API_KEY` (or another provider's key) as a secret.
 
-That's it. The vessel is alive.
+Your journal is now running on your own Worker.
 
 ## Features
 
-- **BYOK v2** — Zero keys in code. All API keys via Cloudflare Secrets Store.
-- **Multi-model** — DeepSeek, SiliconFlow, DeepInfra, Moonshot, z.ai, local models.
-- **Session memory** — Conversations persist and build context over time.
-- **PII safety** — Automatic detection and dehydration of sensitive data.
-- **Rate limiting** — Guest tokens per IP with configurable limits.
-- **Health checks** — Standard `/health` endpoint on all vessels.
-- **Fleet coordination** — CRP-39 protocol for trust, bonds, and events.
+- **Self-hosted privacy:** Journal data never passes through external servers.
+- **Pattern recognition:** Highlights thematic connections across your past entries.
+- **Multi-model support:** Works with DeepSeek, OpenAI, Anthropic, or other compatible LLM APIs.
+- **Simple deployment:** Single Worker file, no external database or additional services.
+- **Configurable updates:** Optionally receive improvements via the Cocapn fleet protocol.
+
+## One Limitation
+
+Pattern recognition depends on the context window and reasoning capabilities of your chosen LLM provider. Deeper insights may require a capable model.
 
 ## Architecture
 
-Single-file Cloudflare Worker. Zero runtime dependencies. Inline HTML serving.
-
-```
-src/
-  worker.ts      # The hull — serves users, runs heartbeats
-lib/
-  byok.ts        # Multi-model routing (BYOK v2)
-  ...
-```
+A standard Cocapn vessel. The logic is contained in a readable TypeScript Worker:
+- `src/worker.ts` – Handles requests, sessions, and fleet coordination.
+- `lib/pattern.ts` – Contains the reflection and connection logic.
+- `lib/byok.ts` – Routes prompts to your configured LLM provider.
 
 ## The Fleet
 
-reallog-ai is one of 40+ autonomous vessels in the Lucineer fleet. Each vessel is a different domain of one intelligence.
+reallog-ai is part of the Cocapn Fleet, a collection of specialized autonomous vessels. Fleet members can share non-breaking updates and improvements.
 
-
-<details>
-<summary><strong>⚓ The Fleet</strong></summary>
-
-**Flagship vessels**
-
-- [cocapn.ai](https://github.com/Lucineer/capitaine)
-- [personallog.ai](https://github.com/Lucineer/personallog-ai)
-- [businesslog.ai](https://github.com/Lucineer/businesslog-ai)
-- [studylog.ai](https://github.com/Lucineer/studylog-ai)
-- [makerlog.ai](https://github.com/Lucineer/makerlog-ai)
-- [playerlog.ai](https://github.com/Lucineer/playerlog-ai)
-- [dmlog.ai](https://github.com/Lucineer/dmlog-ai)
-- [reallog.ai](https://github.com/Lucineer/reallog-ai)
-- [deckboss.ai](https://github.com/Lucineer/deckboss-ai)
-
-**Fleet services**
-
-- [Fleet Catalog](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-- [Git Agent (full)](https://github.com/Lucineer/git-agent)
-- [Cocapn Lite (minimal)](https://github.com/Lucineer/cocapn-lite)
-- [Fleet Orchestrator](https://github.com/Lucineer/fleet-orchestrator)
-- [Dead Reckoning Engine](https://github.com/Lucineer/dead-reckoning-engine)
-- [Dream Engine](https://github.com/Lucineer/dream-engine)
-- [Seed UI (5 layers)](https://github.com/Lucineer/seed-ui)
-
-**For power users**
-
-- [Cocapn Lite (tabula rasa)](https://github.com/Lucineer/cocapn-lite)
-- [Cocapn (core platform)](https://github.com/Lucineer/cocapn)
-- [ZeroClaw (framework)](https://github.com/Lucineer/zeroclaw)
-
-[View all 106 repos →](https://github.com/orgs/Lucineer/repositories)
-[Fleet manifest →](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-
-</details>
-
-
-## Philosophy
-
-> The repo is the agent. The agent is the repo. Intelligence crystallizes from fluid (LLM calls) to solid (code). The vessel becomes faster and cheaper as it becomes smarter.
-
-- **Fork-first** — Power users fork and customize. Casual users visit the domain.
-- **Pay-for-convenience** — We save you costs through bulk inference, not markups.
-- **Git as coordination** — Agents compete via PRs, not chat.
-- **Soft actualization** — Vessels evolve gently based on usage, not hard updates.
-
-## License
-
-MIT · Superinstance & Lucineer (DiGennaro et al.)
+<div align="center">
+  <br>
+  <a href="https://the-fleet.casey-digennaro.workers.dev">The Fleet</a> · <a href="https://cocapn.ai">Cocapn</a>
+  <br><br>
+  <sub>Attribution: Superinstance & Lucineer (DiGennaro et al.)</sub>
+</div>
