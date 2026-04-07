@@ -6,9 +6,17 @@
   "category": "lifestyle",
   "description": "AI-powered Reallog companion",
   "icon": "ship",
-  "endpoints": ["/", "/health", "/vessel.json"],
+  "endpoints": [
+    "/",
+    "/health",
+    "/vessel.json"
+  ],
   "deployment": {
     "platform": "cloudflare-workers",
     "url": "https://reallog-ai.casey-digennaro.workers.dev"
-  }
+  },
+  "capabilities": [
+    "content-creation",
+    "journalism-tools"
+  ]
 }
